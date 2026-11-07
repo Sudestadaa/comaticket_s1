@@ -33,7 +33,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.USER_SERVER }}
+          username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # 1. Detener y remover contenedor existente si está corriendo
@@ -46,10 +46,13 @@ jobs:
             # 3. Limpiar imágenes huérfanas/antiguas para liberar espacio en EC2
             docker image prune -f
 
-            # 4. Iniciar el nuevo contenedor con mapeo de puertos y almacenamiento EFS
+            # 4. Iniciar el nuevo contenedor inyectando credenciales de AWS
             docker run -d \
               --name comaticket \
               -p 8080:8080 \
+              -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              -e AWS_SESSION_TOKEN="${{ secrets.AWS_SESSION_TOKEN }}" \
               -v /mnt/efs:/app/efs-data \
               --restart unless-stopped \
               ${{ secrets.DOCKERHUB_USERNAME }}/comaticket:latest
