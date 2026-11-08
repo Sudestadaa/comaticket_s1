@@ -1,6 +1,9 @@
 package com.comaticket.controller;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.comaticket.dto.EstadisticasEventoDTO;
 import com.comaticket.dto.TicketRequest;
@@ -84,4 +88,26 @@ public class TicketController {
         EstadisticasEventoDTO stats = ticketService.obtenerEstadisticas(eventoId);
         return ResponseEntity.ok(stats);
     }
+
+   // 8. Subir archivo directamente desde Postman a AWS S3
+    @PostMapping(
+        value = "/subir-archivo-directo",
+        consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Map<String, String>> subirArchivoDirecto(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("evento") String evento,
+            @RequestParam("usuarioId") String usuarioId) throws IOException {
+
+        String s3Url = ticketService.subirMultipartFileAS3(evento, usuarioId, file);
+
+        Map<String, String> response = new HashMap<>();
+
+        response.put("mensaje", "Archivo subido exitosamente a S3");
+        response.put("s3Key", evento + "/" + usuarioId + "/" + file.getOriginalFilename());
+        response.put("s3Url", s3Url);
+
+        return ResponseEntity.ok(response);
+    }
+
 }
