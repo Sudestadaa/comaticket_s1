@@ -1,10 +1,14 @@
 package com.comaticket.service;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.comaticket.dto.EstadisticasEventoDTO;
 import com.comaticket.dto.TicketRequest;
@@ -187,4 +191,44 @@ public class TicketService {
                 .ingresosTotales(ingresos)
                 .build();
     }
+
+    // 8. Subir archivo desde Postman a S3
+    public String subirMultipartFileAS3(
+            String evento,
+            String usuarioId,
+            MultipartFile file) throws IOException {
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("El archivo está vacío");
+        }
+
+        String fileName = file.getOriginalFilename();
+
+        if (fileName == null || fileName.isBlank()) {
+            fileName = "archivo.pdf";
+        }
+
+        // Evitar que el nombre contenga rutas de directorios
+        fileName = fileName.replace("\\", "/");
+        fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+
+        String s3Key = String.format("%s/%s/%s", evento, usuarioId, fileName);
+
+        Path tempPath = Files.createTempFile("upload-", ".pdf");
+
+        try {
+            // Transferir MultipartFile al archivo temporal
+            file.transferTo(tempPath.toFile());
+
+            // Subir archivo a AWS S3
+            String s3Url = s3Service.subirArchivo(s3Key, tempPath.toFile());
+
+            return s3Url;
+
+        } finally {
+            // Eliminar archivo temporal
+            Files.deleteIfExists(tempPath);
+        }
+    }
+
 }
